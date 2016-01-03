@@ -12,8 +12,8 @@ import javax.servlet.Filter;
 import org.apache.shiro.realm.Realm;
 import org.apache.shiro.web.env.DefaultWebEnvironment;
 import org.apache.shiro.web.mgt.DefaultWebSecurityManager;
-import org.apache.shiro.web.mgt.WebSecurityManager;
 import org.apache.shiro.web.servlet.AbstractShiroFilter;
+import org.apache.shiro.web.session.mgt.DefaultWebSessionManager;
 import org.glassfish.jersey.server.ResourceConfig;
 import org.secnod.shiro.jersey.AuthInjectionBinder;
 import org.secnod.shiro.jersey.AuthorizationFilterFeature;
@@ -21,73 +21,136 @@ import org.secnod.shiro.jersey.SubjectFactory;
 
 import com.google.inject.Injector;
 
-import io.dropwizard.Bundle;
+import io.dropwizard.Configuration;
+import io.dropwizard.ConfiguredBundle;
 import io.dropwizard.setup.Bootstrap;
 import io.dropwizard.setup.Environment;
 
 /**
- * ShiroWandBundle - Dropwizard bundle for adding Guice injection support to Shiro programmatically.
+ * ShiroWandBundle - Dropwizard bundle for adding Guice injection support to
+ * Shiro programmatically.
+ *
  * @author Brandon Kowalski
  * @version 0.1.0
+ * @param <T>
+ *            Configuration Type from Dropwizard.
  */
-public class ShiroWandBundle implements Bundle {
+public class ShiroWandBundle<T extends Configuration> implements ConfiguredBundle<T> {
 
 	private final static String DEFAULT_URL_PATTERN = "/*";
 
 	private final Injector injector;
 	private final Set<Class<? extends Realm>> realmClasses;
 	private final Set<String> urlPatterns;
-
-	@SafeVarargs
-	/**
-	 * Constructor that takes Injector and varargs of Realms. Binds filter automatically to /*
-	 * @param injector that "knows" how to build realms
-	 * @param realmClasses to be created by injector
-	 */
-	public ShiroWandBundle(final Injector injector, final Class<? extends Realm>... realmClasses) {
-		this(injector, new HashSet<Class<? extends Realm>>(Arrays.asList(realmClasses)));
-	}
+	private final long sessionTimeout;
+	private final String cookieName;
 
 	/**
-	 * Constructor that takes Injector and Set of Realms. Binds filter automatically to /*
-	 * @param injector that "knows" how to build realms
-	 * @param realmClasses to be created by injector
+	 * Constructor that takes Injector, Set of Strings to be used as url
+	 * patterns for filter and Set of Realms.
+	 *
+	 * @param injector
+	 *            that "knows" how to build realms
+	 * @param urlPatterns
+	 *            to be used by the Jersey filter
+	 * @param realmClasses
+	 *            to be created by injector
 	 */
-	public ShiroWandBundle(final Injector injector, final Set<Class<? extends Realm>> realmClasses) {
-		this(injector, new HashSet<String>(Arrays.asList(DEFAULT_URL_PATTERN)), realmClasses);
-	}
-
-	@SafeVarargs
-	/**
-	 * Constructor that takes Injector, Set of Strings to be used as url patterns for filter and varargs of Realms.
-	 * @param injector that "knows" how to build realms
-	 * @param urlPatterns to be used by the Jersey filter
-	 * @param realmClasses to be created by injector
-	 */
-	public ShiroWandBundle(final Injector injector, final Set<String> urlPatterns, final Class<? extends Realm>... realmClasses) {
-		this(injector, urlPatterns, new HashSet<Class<? extends Realm>>(Arrays.asList(realmClasses)));
-	}
-
-	/**
-	 * Constructor that takes Injector, Set of Strings to be used as url patterns for filter and Set of Realms.
-	 * @param injector that "knows" how to build realms
-	 * @param urlPatterns to be used by the Jersey filter
-	 * @param realmClasses to be created by injector
-	 */
-	public ShiroWandBundle(final Injector injector, final Set<String> urlPatterns, final Set<Class<? extends Realm>> realmClasses) {
+	private ShiroWandBundle(final Injector injector, final Set<String> urlPatterns,
+			final Set<Class<? extends Realm>> realmClasses, final long sessionTimeout, final String cookieName) {
 		this.injector = injector;
 		this.realmClasses = realmClasses;
 		this.urlPatterns = urlPatterns;
+		this.sessionTimeout = sessionTimeout;
+		this.cookieName = cookieName;
+	}
+
+	public static class Builder<T extends Configuration> {
+
+		private final Set<String> urlPatterns;
+		private final Set<Class<? extends Realm>> realmClasses;
+
+		private Injector injector;
+		private long sessionTimeout;
+		private String cookieName;
+
+		private Builder() {
+			urlPatterns = new HashSet<String>();
+			realmClasses = new HashSet<Class<? extends Realm>>();
+		}
+
+		public final Builder<T> bindInjector(final Injector injector) {
+			this.injector = injector;
+			return this;
+		}
+
+		public final Builder<T> addRealm(final Class<? extends Realm> realmClass) {
+			this.realmClasses.add(realmClass);
+			return this;
+		}
+
+		@SafeVarargs
+		public final Builder<T> addRealms(final Class<? extends Realm>... realmVarargs) {
+			this.realmClasses.addAll(Arrays.asList(realmVarargs));
+			return this;
+		}
+
+		public final Builder<T> addRealms(final Set<Class<? extends Realm>> realmSet) {
+			this.realmClasses.addAll(realmSet);
+			return this;
+		}
+
+		public final Builder<T> addUrlPattern(final String urlPattern) {
+			this.urlPatterns.add(urlPattern);
+			return this;
+		}
+
+		@SafeVarargs
+		public final Builder<T> addUrlPatterns(final String... urlPatternsVarArg) {
+			this.urlPatterns.addAll(Arrays.asList(urlPatternsVarArg));
+			return this;
+		}
+
+		public final Builder<T> addUrlPatterns(final Set<String> urlPatternSet) {
+			this.urlPatterns.addAll(urlPatternSet);
+			return this;
+		}
+
+		public final Builder<T> setSessionTimeout(final long sessionTimeout) {
+			this.sessionTimeout = sessionTimeout;
+			return this;
+		}
+
+		public final Builder<T> setCookieName(final String cookieName) {
+			this.cookieName = cookieName;
+			return this;
+		}
+
+		public final ShiroWandBundle<T> build() {
+			if (urlPatterns.isEmpty()) {
+				urlPatterns.add(DEFAULT_URL_PATTERN);
+			}
+
+			if (cookieName == null || cookieName.isEmpty()) {
+				cookieName = "JSESSIONID";
+			}
+
+			return new ShiroWandBundle<T>(injector, urlPatterns, realmClasses, sessionTimeout, cookieName);
+		}
+
+	}
+
+	public static <T extends Configuration> Builder<T> newBuilder() {
+		return new Builder<>();
 	}
 
 	@Override
-	public void run(final Environment environment)  {
+	public void run(final T configuration, final Environment environment) throws Exception {
 		final ResourceConfig resourceConfig = environment.jersey().getResourceConfig();
 
 		resourceConfig.register(new AuthorizationFilterFeature());
 		resourceConfig.register(new SubjectFactory());
 		resourceConfig.register(new AuthInjectionBinder());
-
 
 		final Collection<Realm> realms = createRealms();
 		final DefaultWebEnvironment webEnv = buildWebEnvironment(realms);
@@ -105,12 +168,22 @@ public class ShiroWandBundle implements Bundle {
 
 	/**
 	 * Builds the Web Environment and Security Manager
-	 * @param realms used to create security manager
+	 *
+	 * @param realms
+	 *            used to create security manager
 	 * @return Web environment containing security manager.
 	 */
 	protected DefaultWebEnvironment buildWebEnvironment(final Collection<Realm> realms) {
+
+		final DefaultWebSessionManager sessionManager = new DefaultWebSessionManager();
+		sessionManager.setGlobalSessionTimeout(sessionTimeout);
+		sessionManager.getSessionIdCookie().setName(cookieName);
+
+		final DefaultWebSecurityManager securityManager = new DefaultWebSecurityManager(realms);
+		securityManager.setSessionManager(sessionManager);
+
+
 		final DefaultWebEnvironment shiroEnv = new DefaultWebEnvironment();
-		final WebSecurityManager securityManager = new DefaultWebSecurityManager(realms);
 		shiroEnv.setSecurityManager(securityManager);
 
 		return shiroEnv;
@@ -118,7 +191,9 @@ public class ShiroWandBundle implements Bundle {
 
 	/**
 	 * Builds and binds the Jersey filter
-	 * @param environment created by buildWebEnvironment
+	 *
+	 * @param environment
+	 *            created by buildWebEnvironment
 	 * @return the Jersey filter to be bound
 	 */
 	protected Filter buildFilter(final DefaultWebEnvironment environment) {
@@ -134,6 +209,7 @@ public class ShiroWandBundle implements Bundle {
 
 	/**
 	 * Builds all of the realms specified using the Injector.
+	 *
 	 * @return a collection of realms to be used by the security manager.
 	 */
 	protected Collection<Realm> createRealms() {
