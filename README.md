@@ -44,7 +44,7 @@ All you have to do is add an additional bundle in the overridden initializate me
 ```java
 @Override
 public void initialize(final Bootstrap<ServerConfiguration> bootstrap) {
-	bootstrap.addBundle(new ShiroWandBundle<ServerConfiguration>(yourGuiceInjectorInstance, 
+	bootstrap.addBundle(new ShiroWandBundle(yourGuiceInjectorInstance, 
 	  YourRealm1.class, YourRealm2.class....));
 }
 ```
@@ -61,7 +61,7 @@ If you wish to use this alongside dropwizard-guice do the following:
 @Override
 public void initialize(final Bootstrap<ServerConfiguration> bootstrap) {
   bootstrap.addBundle(guiceBundle);
-	bootstrap.addBundle(new ShiroWandBundle<ServerConfiguration>(yourGuiceInjectorInstance, 
+	bootstrap.addBundle(new ShiroWandBundle(yourGuiceInjectorInstance, 
 	  YourRealm1.class, YourRealm2.class....));
 }
 ```
