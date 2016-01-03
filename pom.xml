@@ -7,11 +7,35 @@
 	<version>0.1.0</version>
 	<packaging>jar</packaging>
 
-	<name>shiro-wand</name>
-	<url>https://kowalski.io/shiro-wand</url>
+	<name>${project.groupId}:${project.artifactId}</name>
+	<description>Dropwizard bundle for adding Guice injection support to Shiro programmatically.</description>
+	<url>https://github.com/Kowalski-IO/shiro-wand</url>
+
+	<developers>
+		<developer>
+			<name>Brandon Kowalskir</name>
+			<email>brandon@kowalski.io</email>
+			<organization>Kowalski.io</organization>
+			<organizationUrl>https://kowalski.io</organizationUrl>
+		</developer>
+	</developers>
+
+	<licenses>
+		<license>
+			<name>MIT License</name>
+			<url>http://www.opensource.org/licenses/mit-license.php</url>
+		</license>
+	</licenses>
+
+	<scm>
+		<connection>scm:git:git@github.com:Kowalski-IO/shiro-wand.git</connection>
+		<developerConnection>scm:git:git@github.com:Kowalski-IO/shiro-wand.git</developerConnection>
+		<url>git@github.com:Kowalski-IO/shiro-wand.git</url>
+	</scm>
 
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 		<dropwizard.version>0.9.1</dropwizard.version>
 		<shiro.version>1.2.4</shiro.version>
 		<shiro-jersey.version>0.2.0</shiro-jersey.version>
@@ -20,20 +44,72 @@
 
 	<build>
 		<plugins>
+
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-compiler-plugin</artifactId>
-				<version>3.3</version>
 				<configuration>
 					<source>1.7</source>
 					<target>1.7</target>
+				</configuration>
+			</plugin>
+
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-source-plugin</artifactId>
+				<executions>
+					<execution>
+						<id>attach-sources</id>
+						<goals>
+							<goal>jar</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-javadoc-plugin</artifactId>
+				<executions>
+					<execution>
+						<id>attach-javadocs</id>
+						<goals>
+							<goal>jar</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-gpg-plugin</artifactId>
+				<executions>
+					<execution>
+						<id>sign-artifacts</id>
+						<phase>verify</phase>
+						<goals>
+							<goal>sign</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+
+			<plugin>
+				<groupId>org.sonatype.plugins</groupId>
+				<artifactId>nexus-staging-maven-plugin</artifactId>
+				<version>1.6.3</version>
+				<extensions>true</extensions>
+				<configuration>
+					<serverId>ossrh</serverId>
+					<nexusUrl>https://oss.sonatype.org/</nexusUrl>
+					<autoReleaseAfterClose>true</autoReleaseAfterClose>
 				</configuration>
 			</plugin>
 		</plugins>
 	</build>
 
 	<dependencies>
-	
+
 		<dependency>
 			<groupId>io.dropwizard</groupId>
 			<artifactId>dropwizard-core</artifactId>
